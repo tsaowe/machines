@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ISTUARY CD MACHINES</title>
+    <link rel="stylesheet" href="bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="bootstrap/dist/css/bootstrap-theme.min.css">
+    <script src="jquery/dist/jquery.min.js"></script>
+    <script src="bootstrap/dist/js/bootstrap.min.js"></script>
+
+</head>
+<body>
+
+<!--host,owner,team,type,os,cpu,memory,user,password-->
+
+<table class="table table-hover">
+    <thead>
+    <tr>
+        <td></td>
+        <td><input type="text" class="form-control"></td>
+        <td><input type="text" class="form-control"></td>
+        <td><input type="text" class="form-control"></td>
+        <td><input type="text" class="form-control"></td>
+        <td><input type="text" class="form-control"></td>
+        <td><input type="text" class="form-control"></td>
+        <td><input type="text" class="form-control"></td>
+        <td><input type="text" class="form-control"></td>
+        <td><input type="text" class="form-control"></td>
+        <td>
+            <div class="btn btn-success" onclick="add(this)">ADD</div>
+        </td>
+    </tr>
+    <tr id="head">
+        <th>id</th>
+        <th>host</th>
+        <th>owner</th>
+        <th>team</th>
+        <th>type</th>
+        <th>cpu</th>
+        <th>memory</th>
+        <th>os</th>
+        <th>user</th>
+        <th>password</th>
+        <th>operation</th>
+    </tr>
+
+    </thead>
+    <tbody id="tbody">
+    </tbody>
+</table>
+<script>
+
+    function fillBody(list) {
+
+        var body = (list || []).map(item=>(
+                `<tr>
+                            <th>${item.id}</th>
+                            <td class="readonly">${item.host}</td>
+                            <td>${item.owner}</td>
+                            <td>${item.team}</td>
+                            <td>${item.type}</td>
+                            <td>${item.cpu}</td>
+                            <td>${item.memory}</td>
+                            <td>${item.os}</td>
+                            <td>${item.user}</td>
+                            <td>${item.password}</td>
+                            <th><a href="javascript:void(0);" style="text-decoration: none" onclick="del(this)">DELETE</a></th>
+                        </tr>`
+        )).join('\n');
+
+        $('#tbody').html(body);
+    }
+
+    $('#tbody').delegate('td:not(.readonly)', 'mouseenter', function () {
+        $(this).attr('contenteditable', 'true');
+    }).delegate('td:not(.readonly)', 'mouseleave', function () {
+        $(this).attr('contenteditable', undefined);
+    }).delegate('td:not(.readonly)', 'focusout', function () {
+        if ($(this).html() !== $(this).attr('origin')) {
+            // update
+            let value = $(this).text();
+            let key = $.trim($('#head').find('th').eq($(this).index()).html());
+            let id = $(this).parent().children().eq(0).html() * 1;
+            $.get('/update', {
+                id: id,
+                key: key,
+                value: value,
+                _t: Date.now()
+            });
+        }
+    }).delegate('td:not(.readonly)', 'focusin', function () {
+        $(this).attr('origin', $(this).html());
+    });
+
+    function del(obj) {
+        let pass = prompt('delete authorize');
+        if(pass == null){
+            return;
+        }
+        if ( pass !== 'denali@123') {
+            alert('auth failed');
+        } else {
+            let id = $(obj).parent().parent().children().eq(0).html();
+            $.get('/delete', {
+                id: id,
+                _t: Date.now()
+            }).then(function () {
+                $(obj).parent().parent().detach();
+            });
+        }
+    }
+
+    function add(obj) {
+        var preall = $($(obj).parent().prevAll().get().reverse());
+        let allcomplete = true;
+        var keys = [];
+        var values = [];
+        preall.each((index, item)=> {
+            if (index > 0) {
+                let key = $('#head').children().eq(index).html();
+                let value = $.trim($(item).children().val());
+                keys.push(key);
+                values.push(`'${value}'`);
+                if (!value) {
+                    allcomplete = false;
+                    return false;
+                }
+            }
+        });
+        if (allcomplete) {
+            console.log(keys);
+            $.get('/insert', {
+                query: 'insert into machines (' + keys.join(',') + ') values (' + values.join(',') + ');',
+                _t: Date.now()
+            }, function () {
+                location.reload();
+            });
+
+        } else {
+            alert('please fill all input');
+        }
+
+    }
+
+    $(function () {
+        $.get('/list', {}, function (list) {
+            fillBody(list);
+        });
+    });
+
+</script>
+</body>
+</html>
